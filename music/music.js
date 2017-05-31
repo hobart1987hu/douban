@@ -11,8 +11,8 @@ import {
     StyleSheet,
     Text,
     View,
-    ScrollView,
     ListView,
+    RefreshControl,
     Image,
     ActivityIndicator,
     TouchableOpacity
@@ -32,6 +32,7 @@ var music = React.createClass({
             rowHasChanged: (r1, r2) => r1 !== r2
         })
         return {
+            isRefreshing: false,
             show: false,
             dataSource: ds.cloneWithRows([]),
             keyWords: "Love"
@@ -45,17 +46,28 @@ var music = React.createClass({
             rowHasChanged: (r1, r2) => r1 !== r2
         })
         var that = this
+        that.setState({
+            show: false,
+            isRefreshing: true
+        })
         var baseUrl = ServiceURL.music_search + "?q=" + this.state.keyWords + "&count=10"
         Util.get(baseUrl, function (data) {
             if (!data.musics || !data.musics.length) {
+                that.setState({
+                    isRefreshing: false
+                })
                 return alert("音乐服务出错！")
             }
             var musics = data.musics
             that.setState({
+                isRefreshing: false,
                 show: true,
                 dataSource: ds.cloneWithRows(musics),
             })
         }, function (error) {
+            that.setState({
+                isRefreshing: false
+            })
             alert(error)
         })
     },
@@ -109,6 +121,9 @@ var music = React.createClass({
             </View>
         )
     },
+    _onRefresh: function () {
+        this.getData();
+    },
     render(){
         return (
             <View style={styles.flex_1}>
@@ -125,6 +140,13 @@ var music = React.createClass({
                         <ListView
                             dataSource={this.state.dataSource}
                             renderRow={this._renderRow}
+                            initialListSize={10}
+                            refreshControl={
+                                <RefreshControl refreshing={this.state.isRefreshing}
+                                                onRefresh={this._onRefresh}
+                                                title={"正在加载数据..."}
+                                                colors={['#ff0000', '#00ff00', '#0000ff']}/>
+                            }
                         />
                         : <ActivityIndicator
                         size="large"

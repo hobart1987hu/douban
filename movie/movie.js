@@ -11,6 +11,7 @@ import {
     View,
     ListView,
     TouchableOpacity,
+    RefreshControl,
     ActivityIndicator,
 } from 'react-native';
 
@@ -27,6 +28,7 @@ var movie = React.createClass({
             rowHasChanged: (r1, r2) => r1 !== r2
         })
         return {
+            isRefreshing: false,
             show: false,
             dataSource: ds.cloneWithRows([]),
             keyWords: "幸福"
@@ -44,18 +46,26 @@ var movie = React.createClass({
         var that = this;
         var baseUrl = ServiceURL.movie_search + "?count=10&q=" + this.state.keyWords;
         that.setState({
-            show: false
+            show: false,
+            isRefreshing: true
         })
         Util.get(baseUrl, function (data) {
             if (!data.subjects || !data.subjects.length) {
+                that.setState({
+                    isRefreshing: false,
+                })
                 return alert("电影服务出错！")
             }
             var subjects = data.subjects;
             that.setState({
+                isRefreshing: false,
                 dataSource: ds.cloneWithRows(subjects),
                 show: true
             })
         }, function (error) {
+            that.setState({
+                isRefreshing: false,
+            })
             alert(error)
         })
     },
@@ -103,6 +113,9 @@ var movie = React.createClass({
     _search: function () {
         this.getData()
     },
+    _onRefresh: function () {
+        this.getData();
+    },
     render(){
         return (
             <View style={[styles.flex_1, styles.center]}>
@@ -117,7 +130,15 @@ var movie = React.createClass({
                 {
                     this.state.show ?
                         <ListView dataSource={this.state.dataSource}
-                                  renderRow={this._renderRow}/>
+                                  renderRow={this._renderRow}
+                                  initialListSize={10}
+                                  refreshControl={
+                                      <RefreshControl refreshing={this.state.isRefreshing}
+                                                      onRefresh={this._onRefresh}
+                                                      title={"正在加载数据..."}
+                                                      colors={['#ff0000', '#00ff00', '#0000ff']}
+                                      />
+                                  }/>
                         : <ActivityIndicator
                         size="large"
                         color="red"

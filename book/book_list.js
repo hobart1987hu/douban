@@ -9,7 +9,7 @@ import {
     View,
     ListView,
     ActivityIndicator,
-    ScrollView,
+    RefreshControl,
     TouchableOpacity
 } from 'react-native';
 
@@ -28,7 +28,8 @@ var book = React.createClass({
         return {
             dataSource: ds,
             keyWords: "c语言",
-            show: false
+            show: false,
+            isRefreshing: false
         }
     },
     componentDidMount: function () {
@@ -41,18 +42,26 @@ var book = React.createClass({
         var baseURL = ServiceURL.book_search + "?count=10&q=" + this.state.keyWords;
         var that = this;
         this.setState({
-            show: false
+            show: false,
+            isRefreshing: true
         })
         Util.get(baseURL, function (data) {
             if (!data.books || !data.books.length) {
+                that.setState({
+                    isRefreshing: false,
+                })
                 return alert("图书服务出错啦！")
             }
             var books = data.books;
             that.setState({
+                isRefreshing: false,
                 show: true,
                 dataSource: ds.cloneWithRows(books)
             })
         }, function (error) {
+            that.setState({
+                isRefreshing: false
+            })
             alert(error)
         })
     },
@@ -77,6 +86,9 @@ var book = React.createClass({
             <BookItem row={row} onPress={this._loadPage.bind(this, row.id)}/>
         )
     },
+    _onRefresh: function () {
+        this.getData();
+    },
     render(){
         return (
             <View style={styles.flex_1}>
@@ -91,7 +103,16 @@ var book = React.createClass({
                 {
                     this.state.show ?
                         <ListView dataSource={this.state.dataSource}
-                                  renderRow={this._renderRow}/> :
+                                  renderRow={this._renderRow}
+                                  initialListSize={10}
+                                  refreshControl={
+                                      <RefreshControl
+                                          onRefresh={this._onRefresh}
+                                          refreshing={this.state.isRefreshing}
+                                          colors={['#ff0000', '#00ff00', '#0000ff']}
+                                          title={"正在加载数据..."}
+                                      />
+                                  }/> :
                         <ActivityIndicator
                             size="large"
                             color="red"
@@ -99,7 +120,7 @@ var book = React.createClass({
                                 flex: 1,
                                 justifyContent: 'center',
                                 alignItems: 'center',
-                                backgroundColor: '#F5FCFF'
+                                backgroundColor: '#F5FCFF',
                             }}
                         />
                 }
